@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bordeaux Wedding Trip — Shared</title>
+<style>
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#2d2a32; background:#faf7f9; margin:0; padding:40px 20px; }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  .header { text-align:center; margin-bottom:24px; }
+  .kicker { font-size:13px; letter-spacing:3px; text-transform:uppercase; color:#9a7b9b; }
+  .title { font-size:32px; font-weight:700; margin-top:6px; color:#4a2545; outline:none; }
+  .wedding { background:linear-gradient(135deg,#7b3f6b,#a8567f); color:#fff; border-radius:14px; padding:18px 20px; text-align:center; margin-bottom:24px; box-shadow:0 4px 14px rgba(123,63,107,.3); }
+  .wedding .sub { font-size:13px; letter-spacing:2px; text-transform:uppercase; opacity:.85; }
+  .wedding .main { font-size:23px; font-weight:700; margin-top:2px; outline:none; }
+  .wedding .note { font-size:13px; opacity:.9; margin-top:4px; outline:none; }
+  .legend { display:flex; gap:24px; justify-content:center; margin-bottom:20px; font-size:13px; flex-wrap:wrap; }
+  .legend div { display:flex; align-items:center; gap:6px; }
+  .sw { width:14px; height:14px; border-radius:3px; display:inline-block; }
+  .toolbar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:18px; align-items:center; }
+  .toolbar button { font-size:13px; padding:8px 14px; border-radius:8px; border:1px solid #d8cdd6; background:#fff; color:#4a2545; cursor:pointer; transition:all .15s; }
+  .toolbar button:hover { background:#7b3f6b; color:#fff; border-color:#7b3f6b; }
+  #status { font-size:12px; color:#9a7b9b; min-width:90px; text-align:left; }
+  .tip { text-align:center; font-size:12px; color:#9a7b9b; margin-bottom:14px; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:separate; border-spacing:5px; font-size:13px; min-width:760px; }
+  .dayhdr td { color:#888; font-size:12px; text-transform:uppercase; letter-spacing:1px; text-align:center; position:relative; }
+  .dayhdr td .daytext { outline:none; padding:2px 4px; border-radius:4px; }
+  .dayhdr td .daytext:focus { background:#f3e9f0; }
+  .rowlbl { width:130px; font-weight:700; }
+  .rowlbl span { outline:none; }
+  td.cell { border-radius:6px; text-align:center; padding:10px 3px; outline:none; cursor:text; }
+  td.cell:focus { box-shadow:0 0 0 2px #7b3f6b inset; }
+  .blue { background:#e3eef3; } .blueL { color:#2f6f8f; }
+  .orange { background:#f5e7d8; } .orangeL { color:#c2763a; }
+  .wed { background:#7b3f6b; color:#fff; font-weight:700; }
+  .empty { background:#f0eef0; color:#bbb; }
+  .delcol { position:absolute; top:-8px; right:0; background:#d96b6b; color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; line-height:1; cursor:pointer; display:none; }
+  .dayhdr td:hover .delcol { display:inline-block; }
+  .cards { display:flex; gap:16px; margin-top:28px; flex-wrap:wrap; }
+  .card { flex:1; min-width:260px; border-radius:8px; padding:14px 18px; }
+  .card.b { background:#f4f9fb; border-left:4px solid #2f6f8f; }
+  .card.o { background:#fdf6ee; border-left:4px solid #c2763a; }
+  .card .ct { font-weight:700; margin-bottom:6px; outline:none; }
+  .card .cl { font-size:14px; line-height:1.7; outline:none; }
+  .foot { text-align:center; font-size:12px; color:#999; margin-top:20px; outline:none; }
+  #loading { text-align:center; color:#9a7b9b; padding:40px; font-size:14px; }
+  @media print { .toolbar, .tip, .delcol { display:none !important; } body { background:#fff; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loading">Loading the latest itinerary…</div>
+
+  <div id="content" style="display:none;">
+  <div class="header">
+    <div class="kicker">September · Bordeaux Wedding Trip</div>
+    <div class="title" contenteditable="true">Group Itinerary</div>
+  </div>
+
+  <div class="wedding">
+    <div class="sub">The Wedding</div>
+    <div class="main" contenteditable="true">Wednesday, September 23 · Bordeaux 🍷</div>
+    <div class="note" contenteditable="true">Everyone in Bordeaux starting Tue Sep 22</div>
+  </div>
+
+  <div class="legend">
+    <div><span class="sw" style="background:#2f6f8f;"></span> Zach &amp; Alexis</div>
+    <div><span class="sw" style="background:#c2763a;"></span> The Group</div>
+    <div><span class="sw" style="background:#7b3f6b;"></span> Wedding (everyone)</div>
+  </div>
+
+  <div class="toolbar">
+    <button onclick="addColumn()">+ Add day</button>
+    <button onclick="addRow('blue','#2f6f8f')">+ Add blue row</button>
+    <button onclick="addRow('orange','#c2763a')">+ Add orange row</button>
+    <button onclick="window.print()">🖨️ Print / Save PDF</button>
+    <button onclick="loadData()">↻ Refresh</button>
+    <span id="status">Saved ✓</span>
+  </div>
+  <div class="tip">Click any text to edit — changes save to the shared sheet automatically. Hover a day header to delete a column. Click ↻ Refresh to pull others' latest edits.</div>
+
+  <div class="scroll">
+  <table id="grid">
+    <tr class="dayhdr" id="dayRow">
+      <td></td>
+      <td><span class="daytext" contenteditable="true">Thu 17</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Fri 18</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Sat 19</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Sun 20</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Mon 21</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Tue 22</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td style="color:#7b3f6b;font-weight:700;"><span class="daytext" contenteditable="true">Wed 23</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Thu 24</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Fri 25</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Sat 26</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Sun 27</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+      <td><span class="daytext" contenteditable="true">Mon 28</span><button class="delcol" onclick="delColumn(this)">✕</button></td>
+    </tr>
+    <tr>
+      <td class="rowlbl blueL"><span contenteditable="true">Zach &amp; Alexis</span> <button class="delcol" style="position:static;display:inline-block;" onclick="delRow(this)">✕</button></td>
+      <td class="cell blue" contenteditable="true">London 🇬🇧</td>
+      <td class="cell blue" contenteditable="true">London 🇬🇧</td>
+      <td class="cell blue" contenteditable="true">LDN Paris</td>
+      <td class="cell blue" contenteditable="true">Paris</td>
+      <td class="cell blue" contenteditable="true">Paris → Bordeaux</td>
+      <td class="cell blue" contenteditable="true">Bordeaux 🍷</td>
+      <td class="cell wed" contenteditable="true">Wedding</td>
+      <td class="cell blue" contenteditable="true">→ Cannes</td>
+      <td class="cell blue" contenteditable="true">Cannes 🌴</td>
+      <td class="cell blue" contenteditable="true">Nice</td>
+      <td class="cell blue" contenteditable="true">Nice 🏖️</td>
+      <td class="cell blue" contenteditable="true">Fly home ✈️</td>
+    </tr>
+    <tr>
+      <td class="rowlbl orangeL"><span contenteditable="true">The Group</span> <button class="delcol" style="position:static;display:inline-block;" onclick="delRow(this)">✕</button></td>
+      <td class="cell empty" contenteditable="true">—</td>
+      <td class="cell empty" contenteditable="true">—</td>
+      <td class="cell empty" contenteditable="true">—</td>
+      <td class="cell orange" contenteditable="true">Bordeaux 🍷</td>
+      <td class="cell orange" contenteditable="true">Bordeaux 🍷</td>
+      <td class="cell orange" contenteditable="true">Bordeaux 🍷</td>
+      <td class="cell wed" contenteditable="true">Wedding</td>
+      <td class="cell orange" contenteditable="true">→ Cannes</td>
+      <td class="cell orange" contenteditable="true">Cannes 🌴</td>
+      <td class="cell orange" contenteditable="true">Nice</td>
+      <td class="cell orange" contenteditable="true">Nice 🏖️</td>
+      <td class="cell orange" contenteditable="true">Fly to Paris 🗼</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="cards">
+    <div class="card b">
+      <div class="ct blueL" contenteditable="true">Zach &amp; Alexis route</div>
+      <div class="cl" contenteditable="true">London → Paris → Bordeaux (wedding) → Cannes → Nice → fly home</div>
+    </div>
+    <div class="card o">
+      <div class="ct orangeL" contenteditable="true">The Group route</div>
+      <div class="cl" contenteditable="true">Bordeaux (wedding) → Cannes → Nice → Paris</div>
+    </div>
+  </div>
+
+  <div class="foot" contenteditable="true">Both groups together in Cannes &amp; Nice through Sep 27 — then Zach &amp; Alexis fly home and the group heads to Paris.</div>
+  </div>
+</div>
+
+<script>
+  // ===== Shared-sheet sync =====
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxwIU68CIaVfR9yJmJxnRffeIf_pwo9b2CLkmLTUbV1vTu_WfbWWwywoLfcwuNocNxi/exec';
+
+  const content = document.getElementById('content');
+  const loadingEl = document.getElementById('loading');
+  let statusEl = null;
+  let saveTimer = null;
+  let suppressSave = false; // don't save while we're loading data in
+
+  function setStatus(txt) { if (statusEl) statusEl.textContent = txt; }
+
+  // Load the shared snapshot on open.
+  function loadData() {
+    setStatus('Loading…');
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.ok && res.data && res.data.grid) {
+          suppressSave = true;
+          // Restore the editable regions from the saved snapshot.
+          document.querySelector('.title').innerHTML = res.data.title || document.querySelector('.title').innerHTML;
+          document.querySelector('.wedding .main').innerHTML = res.data.wedMain || document.querySelector('.wedding .main').innerHTML;
+          document.querySelector('.wedding .note').innerHTML = res.data.wedNote || document.querySelector('.wedding .note').innerHTML;
+          document.getElementById('grid').innerHTML = res.data.grid;
+          if (res.data.cardB) document.querySelector('.card.b .cl').innerHTML = res.data.cardB;
+          if (res.data.cardO) document.querySelector('.card.o .cl').innerHTML = res.data.cardO;
+          if (res.data.foot) document.querySelector('.foot').innerHTML = res.data.foot;
+          suppressSave = false;
+        }
+        loadingEl.style.display = 'none';
+        content.style.display = 'block';
+        statusEl = document.getElementById('status');
+        setStatus('Saved ✓');
+      })
+      .catch(() => {
+        // If the sheet can't be reached, show the built-in defaults anyway.
+        loadingEl.style.display = 'none';
+        content.style.display = 'block';
+        statusEl = document.getElementById('status');
+        setStatus('Offline — edits won\u2019t save');
+      });
+  }
+
+  // Gather the current editable state into one snapshot object.
+  function collect() {
+    return {
+      title:   document.querySelector('.title').innerHTML,
+      wedMain: document.querySelector('.wedding .main').innerHTML,
+      wedNote: document.querySelector('.wedding .note').innerHTML,
+      grid:    document.getElementById('grid').innerHTML,
+      cardB:   document.querySelector('.card.b .cl').innerHTML,
+      cardO:   document.querySelector('.card.o .cl').innerHTML,
+      foot:    document.querySelector('.foot').innerHTML
+    };
+  }
+
+  // Save (debounced) a couple seconds after the last edit.
+  function scheduleSave() {
+    if (suppressSave) return;
+    setStatus('Saving…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 1500);
+  }
+
+  function saveNow() {
+    fetch(API_URL, {
+      method: 'POST',
+      // text/plain avoids a CORS preflight that Apps Script can't answer.
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ data: collect() })
+    })
+      .then(r => r.json())
+      .then(res => setStatus(res && res.ok ? 'Saved ✓' : 'Save failed'))
+      .catch(() => setStatus('Save failed'));
+  }
+
+  // Any edit anywhere in the content area triggers a save.
+  document.addEventListener('input', e => {
+    if (content.contains(e.target)) scheduleSave();
+  });
+
+  // ===== Structure editing (also save afterward) =====
+  function addColumn() {
+    const rows = document.querySelectorAll('#grid tr');
+    rows.forEach((row, i) => {
+      if (i === 0) {
+        const td = document.createElement('td');
+        td.innerHTML = '<span class="daytext" contenteditable="true">New day</span><button class="delcol" onclick="delColumn(this)">✕</button>';
+        row.appendChild(td);
+      } else {
+        const td = document.createElement('td');
+        const isBlue = row.querySelector('.blueL') !== null;
+        td.className = 'cell ' + (isBlue ? 'blue' : 'orange');
+        td.setAttribute('contenteditable', 'true');
+        td.textContent = '—';
+        row.appendChild(td);
+      }
+    });
+    scheduleSave();
+  }
+  function delColumn(btn) {
+    const td = btn.parentElement;
+    const idx = Array.from(td.parentElement.children).indexOf(td);
+    document.querySelectorAll('#grid tr').forEach(row => {
+      if (row.children[idx]) row.children[idx].remove();
+    });
+    scheduleSave();
+  }
+  function delRow(btn) {
+    if (document.querySelectorAll('#grid tr').length <= 2) { alert('Keep at least one itinerary row.'); return; }
+    btn.closest('tr').remove();
+    scheduleSave();
+  }
+  function addRow(cls, color) {
+    const table = document.getElementById('grid');
+    const cols = document.getElementById('dayRow').children.length;
+    const tr = document.createElement('tr');
+    const lbl = document.createElement('td');
+    lbl.className = 'rowlbl';
+    lbl.style.color = color;
+    lbl.innerHTML = '<span contenteditable="true">New traveler</span> <button class="delcol" style="position:static;display:inline-block;" onclick="delRow(this)">✕</button>';
+    tr.appendChild(lbl);
+    for (let i = 1; i < cols; i++) {
+      const td = document.createElement('td');
+      td.className = 'cell ' + cls;
+      td.setAttribute('contenteditable', 'true');
+      td.textContent = '—';
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+    scheduleSave();
+  }
+
+  // Kick everything off.
+  loadData();
+</script>
+</body>
+</html>
