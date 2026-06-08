@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bordeaux Wedding Trip — Editable</title>
+<title>Bordeaux Wedding Trip — Shared</title>
 <style>
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#2d2a32; background:#faf7f9; margin:0; padding:40px 20px; }
   .wrap { max-width: 1040px; margin: 0 auto; }
@@ -17,9 +17,10 @@
   .legend { display:flex; gap:24px; justify-content:center; margin-bottom:20px; font-size:13px; flex-wrap:wrap; }
   .legend div { display:flex; align-items:center; gap:6px; }
   .sw { width:14px; height:14px; border-radius:3px; display:inline-block; }
-  .toolbar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:18px; }
+  .toolbar { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:18px; align-items:center; }
   .toolbar button { font-size:13px; padding:8px 14px; border-radius:8px; border:1px solid #d8cdd6; background:#fff; color:#4a2545; cursor:pointer; transition:all .15s; }
   .toolbar button:hover { background:#7b3f6b; color:#fff; border-color:#7b3f6b; }
+  #status { font-size:12px; color:#9a7b9b; min-width:90px; text-align:left; }
   .tip { text-align:center; font-size:12px; color:#9a7b9b; margin-bottom:14px; }
   .scroll { overflow-x:auto; }
   table { width:100%; border-collapse:separate; border-spacing:5px; font-size:13px; min-width:760px; }
@@ -43,11 +44,15 @@
   .card .ct { font-weight:700; margin-bottom:6px; outline:none; }
   .card .cl { font-size:14px; line-height:1.7; outline:none; }
   .foot { text-align:center; font-size:12px; color:#999; margin-top:20px; outline:none; }
+  #loading { text-align:center; color:#9a7b9b; padding:40px; font-size:14px; }
   @media print { .toolbar, .tip, .delcol { display:none !important; } body { background:#fff; } }
 </style>
 </head>
 <body>
 <div class="wrap">
+  <div id="loading">Loading the latest itinerary…</div>
+
+  <div id="content" style="display:none;">
   <div class="header">
     <div class="kicker">September · Bordeaux Wedding Trip</div>
     <div class="title" contenteditable="true">Group Itinerary</div>
@@ -70,8 +75,10 @@
     <button onclick="addRow('blue','#2f6f8f')">+ Add blue row</button>
     <button onclick="addRow('orange','#c2763a')">+ Add orange row</button>
     <button onclick="window.print()">🖨️ Print / Save PDF</button>
+    <button onclick="loadData()">↻ Refresh</button>
+    <span id="status">Saved ✓</span>
   </div>
-  <div class="tip">Click any text to edit it. Hover a day header to delete that column. Click a row label's ✕ to remove the row.</div>
+  <div class="tip">Click any text to edit — changes save to the shared sheet automatically. Hover a day header to delete a column. Click ↻ Refresh to pull others' latest edits.</div>
 
   <div class="scroll">
   <table id="grid">
@@ -135,9 +142,92 @@
   </div>
 
   <div class="foot" contenteditable="true">Both groups together in Cannes &amp; Nice through Sep 27 — then Zach &amp; Alexis fly home and the group heads to Paris.</div>
+  </div>
 </div>
 
 <script>
+  // ===== Shared-sheet sync =====
+  const API_URL = 'https://script.google.com/macros/s/AKfycbxwIU68CIaVfR9yJmJxnRffeIf_pwo9b2CLkmLTUbV1vTu_WfbWWwywoLfcwuNocNxi/exec';
+
+  const content = document.getElementById('content');
+  const loadingEl = document.getElementById('loading');
+  let statusEl = null;
+  let saveTimer = null;
+  let suppressSave = false; // don't save while we're loading data in
+
+  function setStatus(txt) { if (statusEl) statusEl.textContent = txt; }
+
+  // Load the shared snapshot on open.
+  function loadData() {
+    setStatus('Loading…');
+    fetch(API_URL)
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.ok && res.data && res.data.grid) {
+          suppressSave = true;
+          // Restore the editable regions from the saved snapshot.
+          document.querySelector('.title').innerHTML = res.data.title || document.querySelector('.title').innerHTML;
+          document.querySelector('.wedding .main').innerHTML = res.data.wedMain || document.querySelector('.wedding .main').innerHTML;
+          document.querySelector('.wedding .note').innerHTML = res.data.wedNote || document.querySelector('.wedding .note').innerHTML;
+          document.getElementById('grid').innerHTML = res.data.grid;
+          if (res.data.cardB) document.querySelector('.card.b .cl').innerHTML = res.data.cardB;
+          if (res.data.cardO) document.querySelector('.card.o .cl').innerHTML = res.data.cardO;
+          if (res.data.foot) document.querySelector('.foot').innerHTML = res.data.foot;
+          suppressSave = false;
+        }
+        loadingEl.style.display = 'none';
+        content.style.display = 'block';
+        statusEl = document.getElementById('status');
+        setStatus('Saved ✓');
+      })
+      .catch(() => {
+        // If the sheet can't be reached, show the built-in defaults anyway.
+        loadingEl.style.display = 'none';
+        content.style.display = 'block';
+        statusEl = document.getElementById('status');
+        setStatus('Offline — edits won\u2019t save');
+      });
+  }
+
+  // Gather the current editable state into one snapshot object.
+  function collect() {
+    return {
+      title:   document.querySelector('.title').innerHTML,
+      wedMain: document.querySelector('.wedding .main').innerHTML,
+      wedNote: document.querySelector('.wedding .note').innerHTML,
+      grid:    document.getElementById('grid').innerHTML,
+      cardB:   document.querySelector('.card.b .cl').innerHTML,
+      cardO:   document.querySelector('.card.o .cl').innerHTML,
+      foot:    document.querySelector('.foot').innerHTML
+    };
+  }
+
+  // Save (debounced) a couple seconds after the last edit.
+  function scheduleSave() {
+    if (suppressSave) return;
+    setStatus('Saving…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 1500);
+  }
+
+  function saveNow() {
+    fetch(API_URL, {
+      method: 'POST',
+      // text/plain avoids a CORS preflight that Apps Script can't answer.
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ data: collect() })
+    })
+      .then(r => r.json())
+      .then(res => setStatus(res && res.ok ? 'Saved ✓' : 'Save failed'))
+      .catch(() => setStatus('Save failed'));
+  }
+
+  // Any edit anywhere in the content area triggers a save.
+  document.addEventListener('input', e => {
+    if (content.contains(e.target)) scheduleSave();
+  });
+
+  // ===== Structure editing (also save afterward) =====
   function addColumn() {
     const rows = document.querySelectorAll('#grid tr');
     rows.forEach((row, i) => {
@@ -154,6 +244,7 @@
         row.appendChild(td);
       }
     });
+    scheduleSave();
   }
   function delColumn(btn) {
     const td = btn.parentElement;
@@ -161,10 +252,12 @@
     document.querySelectorAll('#grid tr').forEach(row => {
       if (row.children[idx]) row.children[idx].remove();
     });
+    scheduleSave();
   }
   function delRow(btn) {
     if (document.querySelectorAll('#grid tr').length <= 2) { alert('Keep at least one itinerary row.'); return; }
     btn.closest('tr').remove();
+    scheduleSave();
   }
   function addRow(cls, color) {
     const table = document.getElementById('grid');
@@ -183,7 +276,11 @@
       tr.appendChild(td);
     }
     table.appendChild(tr);
+    scheduleSave();
   }
+
+  // Kick everything off.
+  loadData();
 </script>
 </body>
 </html>
